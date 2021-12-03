@@ -71,6 +71,12 @@ procedure Day02 is
    
    Horizontal, Depth : Integer;
 begin
+   if Argument_Count /= 1 then
+      Put_Line ("Usage: ./day02 <filename>");
+      Set_Exit_Status (Failure);
+      return;
+   end if;
+   
    Get_Positions (Argument (1), Horizontal, Depth);
    Put_Line ("Part 1:");
    Put_Line ("  Horizontal position:" & Integer'Image (Horizontal));
