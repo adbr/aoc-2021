@@ -1,7 +1,9 @@
 -- adbr 2021-12-04
 
 --  Part 1:
---    Score of winning board: 65325
+--    First winner score: 65325
+--  Part 2:
+--    Last winner score: 4624
 
 with Ada.Text_IO;            use Ada.Text_IO;
 with Ada.Command_Line;       use Ada.Command_Line;
@@ -18,6 +20,8 @@ procedure Day04 is
          Mark : Boolean := False;
       end record;
    type Board_Type is array (Board_Index, Board_Index) of Board_Entry;
+   
+   Value_Error : exception;
    
    package Number_IO is new Ada.Text_IO.Integer_IO (Number);
    use Number_IO;
@@ -47,130 +51,145 @@ procedure Day04 is
       Put_Line ("]");
    end Print_Board;
       
-   function Score (File_Name : String) return Integer is
-      
-      procedure Read_Data (File_Name : String;
-                           Numbers : out Number_Vector.Vector;
-                           Boards  : out Board_Vector.Vector) is
-         File : File_Type;
-      begin
-         Open (File, In_File, File_Name);
-         
-         -- read numbers
-         declare
-            C   : Character;
-            Eol : Boolean;
-            Num : Number;
-         begin
-            while not End_Of_Line (File) loop
-               Look_Ahead (File, C, Eol);
-               if C = ',' then
-                  Get (File, C); -- skip delimiter
-               end if;
-               Get (File, Num);
-               Numbers.Append (Num);
-            end loop;
-         end;
-         
-         -- read boards
-         declare
-            Num   : Number;
-            Board : Board_Type;
-         begin
-            while not End_Of_File (File) loop
-               for I in Board_Index loop
-                  for J in Board_Index loop
-                     Get (File, Num);
-                     Board (I, J) := Board_Entry'(Num => Num, Mark => False);
-                  end loop;
-               end loop;
-               Boards.Append (Board);
-            end loop;
-         end;
-         
-         Close (File);
-      end Read_Data;
-      
-      procedure Mark_Number (Boards : in out Board_Vector.Vector;
-                             Num : Number) is
-      begin
-         for B of Boards loop
-            for I in B'Range (1) loop
-               for J in B'Range (2) loop
-                  if B (I, J).Num = Num then
-                     B (I, J).Mark := True;
-                  end if;
-               end loop;
-            end loop;
-         end loop;
-      end Mark_Number;
-      
-      procedure Search_Winner (Boards    : in Board_Vector.Vector;
-                              Winner    : out Board_Type;
-                              Is_Winner : out Boolean) is
-      begin
-         for B of Boards loop
-            -- check rows
-            for I in B'Range (1) loop
-               declare
-                  Mark : Boolean := True;
-               begin
-                  for J in B'Range (2) loop
-                     Mark := Mark and B(I, J).Mark;
-                  end loop;
-                  if Mark then
-                     Is_Winner := True;
-                     Winner    := B;
-                     return;
-                  end if;
-               end;
-            end loop;
-            
-            -- check columns
-            for I in B'Range (1) loop
-               declare
-                  Mark : Boolean := True;
-               begin
-                  for J in B'Range (2) loop
-                     Mark := Mark and B(J, I).Mark;
-                  end loop;
-                  if Mark then
-                     Is_Winner := True;
-                     Winner    := B;
-                     return;
-                  end if;
-               end;
-            end loop;
-         end loop;
-         Is_Winner := False;
-      end Search_Winner;
-      
-      Numbers : Number_Vector.Vector;
-      Boards  : Board_Vector.Vector;
+   procedure Read_Data (File_Name : String;
+                        Numbers   : out Number_Vector.Vector;
+                        Boards    : out Board_Vector.Vector) is
+      File : File_Type;
    begin
-      Read_Data (File_Name, Numbers, Boards);
-      for Num of Numbers loop
-         Mark_Number (Boards, Num);
-         declare
-            Winner    : Board_Type;
-            Is_Winner : Boolean;
-            Score     : Integer := 0;
-         begin
-            Search_Winner (Boards, Winner, Is_Winner);
-            if Is_Winner then
-               for E of Winner loop
-                  if not E.Mark then
-                     Score := Score + Integer (E.Num);
-                  end if;
+      Open (File, In_File, File_Name);
+      
+      -- read numbers
+      declare
+         C   : Character;
+         Eol : Boolean;
+         Num : Number;
+      begin
+         while not End_Of_Line (File) loop
+            Look_Ahead (File, C, Eol);
+            if C = ',' then
+               Get (File, C); -- skip delimiter
+            end if;
+            Get (File, Num);
+            Numbers.Append (Num);
+         end loop;
+      end;
+      
+      -- read boards
+      declare
+         Num   : Number;
+         Board : Board_Type;
+      begin
+         while not End_Of_File (File) loop
+            for I in Board_Index loop
+               for J in Board_Index loop
+                  Get (File, Num);
+                  Board (I, J) := Board_Entry'(Num => Num, Mark => False);
                end loop;
-               Score := Score * Integer (Num);
-               return Score;
+            end loop;
+            Boards.Append (Board);
+         end loop;
+      end;
+      
+      Close (File);
+   end Read_Data;
+      
+   procedure Mark_Number (Boards : in out Board_Vector.Vector;
+                          Num    : Number) is
+   begin
+      for B of Boards loop
+         for I in B'Range (1) loop
+            for J in B'Range (2) loop
+               if B (I, J).Num = Num then
+                  B (I, J).Mark := True;
+               end if;
+            end loop;
+         end loop;
+      end loop;
+   end Mark_Number;
+   
+   function Is_Winner_Board (B : Board_Type) return Boolean is
+   begin
+      -- check rows
+      for I in B'Range (1) loop
+         declare
+            Mark : Boolean := True;
+         begin
+            for J in B'Range (2) loop
+               Mark := Mark and B(I, J).Mark;
+            end loop;
+            if Mark then
+               return True;
             end if;
          end;
       end loop;
-      return 0;
+      
+      -- check columns
+      for I in B'Range (1) loop
+         declare
+            Mark : Boolean := True;
+         begin
+            for J in B'Range (2) loop
+               Mark := Mark and B(J, I).Mark;
+            end loop;
+            if Mark then
+               return True;
+            end if;
+         end;
+      end loop;
+      
+      return False;
+   end Is_Winner_Board;
+   
+   function Score (B : Board_Type; Num : Number) return Integer is
+      Result : Integer := 0;
+   begin
+      for E of B loop
+         if not E.Mark then
+            Result := Result + Integer (E.Num);
+         end if;
+      end loop;
+      Result := Result * Integer (Num);
+      return Result;
    end Score;
    
+   procedure Winner_Score (File_Name          : String;
+                           First_Winner_Score : out Integer;
+                           Last_Winner_Score  : out Integer) is
+      Numbers        : Number_Vector.Vector;
+      Boards         : Board_Vector.Vector;
+      Winner_Boards  : Board_Vector.Vector;
+      Winner_Numbers : Number_Vector.Vector;
+      Lose_Boards    : Board_Vector.Vector;
+   begin
+      Read_Data (File_Name, Numbers, Boards);
+      
+      for Num of Numbers loop
+         Mark_Number (Boards, Num);
+         for B of Boards loop
+            if Is_Winner_Board (B) then
+               Winner_Boards.Append (B);
+               Winner_Numbers.Append (Num);
+            else
+               Lose_Boards.Append (B);
+            end if;
+         end loop;
+         Boards.Assign (Lose_Boards);
+         Lose_Boards.Clear;
+      end loop;
+      
+      if Winner_Boards.Length = 0 then
+         raise Value_Error with "Missing winner board";
+      end if;
+      
+      First_Winner_Score := Score (Winner_Boards.First_Element,
+                                   Winner_Numbers.First_Element);
+      
+      Last_Winner_Score := Score (Winner_Boards.Last_Element,
+                                  Winner_Numbers.Last_Element);
+   end Winner_Score;
+   
+   First_Winner_Score : Integer;
+   Last_Winner_Score  : Integer;
 begin
    if Argument_Count /= 1 then
       Put_Line ("Usage: ./day04 <filename>");
@@ -178,6 +197,11 @@ begin
       return;
    end if;
    
+   Winner_Score (Argument (1), First_Winner_Score, Last_Winner_Score);
+   
    Put_Line ("Part 1:");
-   Put_Line ("  Score of winning board:" & Score (Argument (1))'Img);
+   Put_Line ("  First winner score:" & First_Winner_Score'Img);
+   
+   Put_Line ("Part 2:");
+   Put_Line ("  Last winner score:" & Last_Winner_Score'Img);
 end Day04;
