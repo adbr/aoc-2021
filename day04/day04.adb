@@ -34,12 +34,13 @@ procedure Day04 is
      (Index_Type => Positive,
       Element_Type => Board_Type);
    
-   function Board_Entry_Image (E : Board_Entry) return String is
-   begin
-      return E.Num'Img & (if E.Mark then "*" else " ");
-   end Board_Entry_Image;
-   
    procedure Print_Board (B : Board_Type) is
+   
+      function Board_Entry_Image (E : Board_Entry) return String is
+      begin
+         return E.Num'Img & (if E.Mark then "*" else " ");
+      end Board_Entry_Image;
+      
    begin
       Put_Line ("[");
       for I in B'Range (1) loop
