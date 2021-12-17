@@ -24,8 +24,7 @@ procedure Day08 is
       Element_Type => Entry_Type);
    
    procedure Read_Data (File_Name : String;
-                        Entries : out Entry_Vector.Vector)
-   is
+                        Entries : out Entry_Vector.Vector) is
       
       function Parse_Pattern (Line : String; Idx : in out Natural)
                              return Unbounded_String is
