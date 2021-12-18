@@ -36,6 +36,14 @@ procedure Day09 is
      (Index_Type   => Positive,
       Element_Type => Point_Vector.Vector,
       "="          => Point_Vector."=");
+      
+   function "<" (Left, Right : Point_Vector.Vector) return Boolean is
+   begin
+      return Left.Length < Right.Length;
+   end "<";
+   
+   package Basin_Sorting is new Point_Map_Vector.Generic_Sorting
+     ("<" => "<");
    
    procedure Print_Height_Map (Map : Height_Map_Vector.Vector) is
    begin
@@ -219,22 +227,15 @@ procedure Day09 is
    end Find_Basin;
 
    procedure Part_2 (File_Name : String) is
+      
       Height_Map : Height_Map_Vector.Vector;
       Low_Points : Point_Vector.Vector;
       Basins     : Point_Map_Vector.Vector;
       Result     : Natural := 0;
-      
-      function "<" (Left, Right : Point_Vector.Vector) return Boolean is
-      begin
-         return Left.Length < Right.Length;
-      end "<";
-      package Basin_Sorting is new Point_Map_Vector.Generic_Sorting
-        ("<" => "<");
-      
    begin
       Read_Data (File_Name, Height_Map);
-      Find_Low_Points (Height_Map, Low_Points);
       
+      Find_Low_Points (Height_Map, Low_Points);
       for Point of Low_Points loop
          declare
             Basin : Point_Vector.Vector;
@@ -245,15 +246,16 @@ procedure Day09 is
       end loop;
       
       Basin_Sorting.Sort (Basins);
-      if Basins.Length < 3 then
-         raise Value_Error with "Not enough basins: " & Basins.Length'Img;
-      end if;
       declare
-         Last : Positive := Basins.Last_Index;
+         Idx : Positive;
       begin
-         Result := Natural (Basins.Element(Last).Length) *
-                   Natural (Basins.Element(Last - 1).Length) *
-                   Natural (Basins.Element(Last - 2).Length);
+         if Basins.Length < 3 then
+            raise Value_Error with "Not enough basins: " & Basins.Length'Img;
+         end if;
+         Idx := Basins.Last_Index;
+         Result := Natural (Basins.Element(Idx).Length) *
+           Natural (Basins.Element(Idx - 1).Length) *
+           Natural (Basins.Element(Idx - 2).Length);
       end;
       
       Put_Line ("Part 2:");
