@@ -5,8 +5,6 @@ with Ada.Command_Line; use Ada.Command_Line;
 
 procedure Day11 is
    
-   Steps : constant Positive := 100;
-   
    type Energy_Type is new Natural;
    Min_Energy : constant Energy_Type := 0;
    Max_Energy : constant Energy_Type := 9;
@@ -31,68 +29,63 @@ procedure Day11 is
          New_Line;
       end loop;
    end Print_Grid;
+   
+   procedure Read_Data (File_Name : String; Grid : out Grid_Type) is
+      File : File_Type;
+      E : Energy_Type;
+   begin
+      Open (File, In_File, File_Name);
+      while not End_Of_File (File) loop
+         for R in Grid'Range (1) loop
+            for C in Grid'Range (2) loop
+               Energy_IO.Get (File, E, Width => 1);
+               Grid (R, C) := (Energy => E, Flashed => False);
+            end loop;
+            Skip_Line (File);
+         end loop;
+      end loop;
+      Close (File);
+   end Read_Data;
+   
+   procedure Flash (Grid : in out Grid_Type; Row, Col : Index_Type) is
+      
+      subtype Extended_Index is Index_Type'Base range
+        Index_Type'First - 1 .. Index_Type'Last + 1;
+      
+      function Is_Valid_Index (Grid : Grid_Type; R, C : Extended_Index)
+                              return Boolean
+      is (R >= Grid'First (1) and R <= Grid'Last (1) and
+            C >= Grid'First (2) and C <= Grid'Last (2));
+
+   begin
+      Grid (Row, Col).Flashed := True;
+      
+      -- check neighbours
+      for I in -1 .. 1 loop
+         for J in -1 .. 1 loop
+            if (I /= 0 or J /= 0) and
+              Is_Valid_Index (Grid, Row + I, Col + J)
+            then
+               declare
+                  R : Index_Type := Row + I;
+                  C : Index_Type := Col + J;
+                  O : Octopus_Type renames Grid(R, C);
+               begin
+                  O.Energy := O.Energy + 1;
+                  if O.Energy > Max_Energy and not O.Flashed then
+                     Flash (Grid, R, C);
+                  end if;
+               end;
+            end if;
+         end loop;
+      end loop;
+      
+   end Flash;
 
    procedure Part_1 (File_Name : String) is
-      
-      procedure Read_Data (File_Name : String; Grid : out Grid_Type) is
-         File : File_Type;
-         E : Energy_Type;
-      begin
-         Open (File, In_File, File_Name);
-         while not End_Of_File (File) loop
-            for R in Grid'Range (1) loop
-               for C in Grid'Range (2) loop
-                  Energy_IO.Get (File, E, Width => 1);
-                  Grid (R, C) := (Energy => E, Flashed => False);
-               end loop;
-               Skip_Line (File);
-            end loop;
-         end loop;
-         Close (File);
-      end Read_Data;
-      
-      procedure Flash (Grid : in out Grid_Type; Row, Col : Index_Type) is
-         
-         subtype Extended_Index is Index_Type'Base range
-           Index_Type'First - 1 .. Index_Type'Last + 1;
-         
-         function Is_Valid_Index (Grid : Grid_Type; R, C : Extended_Index)
-                                 return Boolean
-         is (R >= Grid'First (1) and R <= Grid'Last (1) and
-             C >= Grid'First (2) and C <= Grid'Last (2));
-
-      begin
-         Grid (Row, Col).Flashed := True;
-         
-         -- check neighbours
-         for I in -1 .. 1 loop
-            for J in -1 .. 1 loop
-               if (I /= 0 or J /= 0) and
-                 Is_Valid_Index (Grid, Row + I, Col + J)
-               then
-                  declare
-                     R : Index_Type := Row + I;
-                     C : Index_Type := Col + J;
-                     O : Octopus_Type renames Grid(R, C);
-                  begin
-                     O.Energy := O.Energy + 1;
-                     if O.Energy > Max_Energy and not O.Flashed then
-                        Flash (Grid, R, C);
-                     end if;
-                  end;
-               end if;
-            end loop;
-         end loop;
-         
-      end Flash;
-      
-      -- Local variables
-      
-      Result : Natural := 0;
-      Grid : Grid_Type;
-      
-   -- Start of processing for Part_1
-      
+      Steps  : constant Positive := 100;
+      Result : Natural           := 0;
+      Grid   : Grid_Type;
    begin
       Read_Data (File_Name, Grid);
       
@@ -135,6 +128,49 @@ procedure Day11 is
       Put_Line ("  Total flashes after" & Steps'Img & " steps:" & Result'Img);
    end Part_1;
 
+   procedure Part_2 (File_Name : String) is
+      Grid : Grid_Type;
+      Step : Positive := 1;
+      Grid_Elements : constant Positive := Grid'Length(1) * Grid'Length(2);
+   begin
+      Read_Data (File_Name, Grid);
+      loop
+         --  increase energy level:
+         for O of Grid loop
+            O.Energy := O.Energy + 1;
+         end loop;
+         
+         --  flash:
+         for R in Grid'Range (1) loop
+            for C in Grid'Range (2) loop
+               if Grid(R, C).Energy > Max_Energy and
+                 not Grid(R, C).Flashed
+               then
+                  Flash (Grid, R, C);
+               end if;
+            end loop;
+         end loop;
+         
+         --  reset flashed:
+         declare
+            Num_Flashed : Natural := 0;
+         begin
+            for O of Grid loop
+               if O.Flashed then
+                  O.Energy := Min_Energy;
+                  O.Flashed := False;
+                  Num_Flashed := Num_flashed + 1;
+               end if;
+            end loop;
+            exit when Num_Flashed = Grid_Elements;
+         end;
+         Step := Step + 1;
+      end loop;
+      
+      Put_Line ("Part 2:");
+      Put_Line ("  All flashed step:" & Step'Img);
+   end Part_2;
+   
 begin
    if Argument_Count /= 1 then
       Put_Line ("Usage: ./day11 <inputfile>");
@@ -142,7 +178,10 @@ begin
    end if;
    
    Part_1 (Argument (1));
+   Part_2 (Argument (1));
 end Day11;
 
 --  Part 1:
 --    Total flashes after 100 steps: 1627
+--  Part 2:
+--    All flashed step: 329
