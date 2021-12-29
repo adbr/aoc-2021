@@ -1,5 +1,8 @@
 -- adbr 2021-12-24
 
+-- Part 1: OK
+-- Part 2: unfinished
+
 with Ada.Text_IO;              use Ada.Text_IO;
 with Ada.Text_IO.Unbounded_IO; use Ada.Text_IO.Unbounded_IO;
 with Ada.Command_Line;         use Ada.Command_Line;
@@ -134,9 +137,9 @@ procedure Day12 is
       end;
    end Read_Data;
    
-   procedure Search_Paths (Nodes : Node_Vector.Vector;
-                           Node : Node_Access;
-                           Paths : in out Natural) is
+   procedure Search_Paths_1 (Nodes : Node_Vector.Vector;
+                             Node : Node_Access;
+                             Paths : in out Natural) is
       
       function Is_Start (Node : Node_Access) return Boolean is
       begin
@@ -163,11 +166,49 @@ procedure Day12 is
       end if;
       
       for N of Node.Neighbors loop
-         Search_Paths (Nodes, N, Paths);
+         Search_Paths_1 (Nodes, N, Paths);
       end loop;
       
       Node.Visited := 0;
-   end Search_Paths;
+   end Search_Paths_1;
+   
+   procedure Search_Paths_2 (Nodes : Node_Vector.Vector;
+                             Node : Node_Access;
+                             Paths : in out Natural) is
+      
+      function Is_Start (Node : Node_Access) return Boolean is
+      begin
+         return To_String (Node.Name) = "start";
+      end Is_Start;
+      
+      function Is_End (Node : Node_Access) return Boolean is
+      begin
+         return To_String (Node.Name) = "end";
+      end Is_End;
+
+   begin
+      if Is_End (Node) then
+         Paths := Paths + 1;
+         return;
+      end if;
+      
+      if Node.Small then
+         if Node.Visited >= 2 then
+            return;
+         else
+            Node.Visited := Node.Visited + 1;
+         end if;
+      end if;
+      
+      for N of Node.Neighbors loop
+         Put (Node.Name); Put ("-"); Put (N.Name); Put (", ");
+         Search_Paths_2 (Nodes, N, Paths);
+      end loop;
+      
+      if Node.Small then
+         Node.Visited := Node.Visited - 1;
+      end if;
+   end Search_Paths_2;
 
    procedure Part_1 (File_Name : String) is
       Nodes : Node_Vector.Vector;
@@ -178,12 +219,28 @@ procedure Day12 is
          Start_Node : Node_Access :=
            Find_Node (Nodes, To_Unbounded_String ("start"));
       begin
-         Search_Paths (Nodes, Start_Node, Paths);
+         Search_Paths_1 (Nodes, Start_Node, Paths);
       end;
       
       Put_Line ("Part 1:");
       Put_Line ("  Number of paths:" & Paths'Img);
    end Part_1;
+
+   procedure Part_2 (File_Name : String) is
+      Nodes : Node_Vector.Vector;
+      Paths : Natural := 0;
+   begin
+      Read_Data (File_Name, Nodes);
+      declare
+         Start_Node : Node_Access :=
+           Find_Node (Nodes, To_Unbounded_String ("start"));
+      begin
+         Search_Paths_2 (Nodes, Start_Node, Paths);
+      end;
+      
+      Put_Line ("Part 2:");
+      Put_Line ("  Number of paths:" & Paths'Img);
+   end Part_2;
 
 begin
    if Argument_Count /= 1 then
@@ -191,6 +248,7 @@ begin
    end if;
    
    Part_1 (Argument (1));
+   Part_2 (Argument (1));
 end Day12;
 
 --  Part 1:
