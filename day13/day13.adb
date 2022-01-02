@@ -153,6 +153,77 @@ procedure Day13 is
       Put_Line ("Part 1:");
       Put_Line ("  Number of dots after first fold:" & Result'Img);
    end Part_1;
+   
+   procedure Print_Image (Dots : Dots_Vector.Vector) is
+      
+      type Image_Type is array (Natural range <>, Natural range <>) of Boolean;
+      
+      procedure Get_Max_XY (Dots : Dots_Vector.Vector;
+                            Max_X, Max_Y : out Natural)
+      is
+         First : Boolean := True;
+      begin
+         for D of Dots loop
+            if First then
+               Max_X := D.X;
+               Max_Y := D.Y;
+               First := False;
+            else
+               if D.X > Max_X then
+                  Max_X := D.X;
+               end if;
+               if D.Y > Max_Y then
+                  Max_Y := D.Y;
+               end if;
+            end if;
+         end loop;
+      end Get_Max_XY;
+      
+      function Dots_Image (Dots : Dots_Vector.Vector) return Image_Type is
+         Max_X, Max_Y : Natural;
+      begin
+         Get_Max_XY (Dots, Max_X, Max_Y);
+         declare
+            Image : Image_Type (0 .. Max_Y, 0 .. Max_X) :=
+              (others => (others => False));
+         begin
+            for D of Dots loop
+               Image (D.Y, D.X) := True;
+            end loop;
+            return Image;
+         end;
+      end Dots_Image;
+      
+   begin
+      declare
+         Image : Image_Type := Dots_Image (Dots);
+      begin
+         for Y in Image'Range (1) loop
+            for X in Image'Range (2) loop
+               if Image (Y, X) then
+                  Put ("#");
+               else
+                  Put (".");
+               end if;
+            end loop;
+            New_Line;
+         end loop;
+      end;
+   end Print_Image;
+
+   procedure Part_2 (File_Name : String) is
+      Dots   : Dots_Vector.Vector;
+      Folds  : Folds_Vector.Vector;
+   begin
+      Read_Data (File_Name, Dots, Folds);
+      
+      for F of Folds loop
+         Make_Fold (Dots, F);
+      end loop;
+      
+      Put_Line ("Part 2:");
+      Print_Image (Dots);
+   end Part_2;
 
 begin
    if Argument_Count /= 1 then
@@ -161,4 +232,15 @@ begin
    end if;
    
    Part_1 (Argument (1));
+   Part_2 (Argument (1));
 end Day13;
+
+--  Part 1:
+--    Number of dots after first fold: 602
+--  Part 2:
+--  .##...##..####...##.#..#.####..##..#..#
+--  #..#.#..#.#.......#.#..#....#.#..#.#.#.
+--  #....#..#.###.....#.####...#..#....##..
+--  #....####.#.......#.#..#..#...#....#.#.
+--  #..#.#..#.#....#..#.#..#.#....#..#.#.#.
+--  .##..#..#.#.....##..#..#.####..##..#..#
